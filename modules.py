@@ -110,25 +110,29 @@ class ResBlock(nn.Module):
 class VectorQuantizedVAE(nn.Module):
     def __init__(self, input_dim, dim, K=512):
         super().__init__()
+        self.layerDim = 64
+        self.resDim = 64
         self.encoder = nn.Sequential(
-            nn.Conv2d(input_dim, dim, 4, 2, 1),
-            nn.BatchNorm2d(dim),
+            nn.Conv2d(input_dim, self.layerDim, 4, 2, 1),
+            nn.BatchNorm2d(self.layerDim),
             nn.ReLU(True),
-            nn.Conv2d(dim, dim, 4, 2, 1),
-            ResBlock(dim),
-            ResBlock(dim),
+            nn.Conv2d(self.layerDim, self.resDim, 4, 2, 1),
+            ResBlock(self.resDim),
+            ResBlock(self.resDim),
+            nn.Conv2d(self.resDim, dim, 1, 1)
         )
 
         self.codebook = VQEmbedding(K, dim)
 
         self.decoder = nn.Sequential(
-            ResBlock(dim),
-            ResBlock(dim),
+            nn.Conv2d(dim, self.resDim, 1, 1),
+            ResBlock(self.resDim),
+            ResBlock(self.resDim),
             nn.ReLU(True),
-            nn.ConvTranspose2d(dim, dim, 4, 2, 1),
-            nn.BatchNorm2d(dim),
+            nn.ConvTranspose2d(self.resDim, self.layerDim, 4, 2, 1),
+            nn.BatchNorm2d(self.layerDim),
             nn.ReLU(True),
-            nn.ConvTranspose2d(dim, input_dim, 4, 2, 1),
+            nn.ConvTranspose2d(self.layerDim, input_dim, 4, 2, 1),
             nn.Tanh()
         )
 
@@ -274,3 +278,121 @@ class GatedPixelCNN(nn.Module):
                     probs.multinomial(1).squeeze().data
                 )
         return x
+
+'''
+VQVAE version with resolution of 16x16
+'''
+class VQVAE_res16(nn.Module):
+    def __init__(self, input_dim, dim, K=512):
+        super().__init__()
+        self.layerDim = 64
+        self.resDim = 64
+        self.encoder = nn.Sequential(
+            nn.Conv2d(input_dim, self.layerDim, 4, 2, 1),
+            nn.BatchNorm2d(self.layerDim),
+            nn.ReLU(True),
+            nn.Conv2d(self.layerDim, self.resDim, 4, 2, 1),
+            nn.BatchNorm2d(self.layerDim),
+            nn.ReLU(True),
+            nn.Conv2d(self.layerDim, self.resDim, 4, 2, 1),
+            ResBlock(self.resDim),
+            ResBlock(self.resDim),
+            nn.Conv2d(self.resDim, dim, 1, 1)
+        )
+
+        self.codebook = VQEmbedding(K, dim)
+
+        self.decoder = nn.Sequential(
+            nn.Conv2d(dim, self.resDim, 1, 1),
+            ResBlock(self.resDim),
+            ResBlock(self.resDim),
+            nn.ReLU(True),
+            nn.ConvTranspose2d(self.resDim, self.layerDim, 4, 2, 1),
+            nn.BatchNorm2d(self.layerDim),
+            nn.ReLU(True),
+            nn.ConvTranspose2d(self.resDim, self.layerDim, 4, 2, 1),
+            nn.BatchNorm2d(self.layerDim),
+            nn.ReLU(True),
+            nn.ConvTranspose2d(self.layerDim, input_dim, 4, 2, 1),
+            nn.Tanh()
+        )
+
+        self.apply(weights_init)
+
+    def encode(self, x):
+        z_e_x = self.encoder(x)
+        latents = self.codebook(z_e_x)
+        return latents
+
+    def decode(self, latents):
+        z_q_x = self.codebook.embedding(latents).permute(0, 3, 1, 2)  # (B, D, H, W)
+        x_tilde = self.decoder(z_q_x)
+        return x_tilde
+
+    def forward(self, x):
+        z_e_x = self.encoder(x)
+        z_q_x_st, z_q_x = self.codebook.straight_through(z_e_x)
+        x_tilde = self.decoder(z_q_x_st)
+        return x_tilde, z_e_x, z_q_x
+
+
+
+'''
+VQVAE version with resolution of 8x8
+'''
+class VQVAE_res8(nn.Module):
+    def __init__(self, input_dim, dim, K=512):
+        super().__init__()
+        self.layerDim = dim
+        self.resDim = dim
+        self.encoder = nn.Sequential(
+            nn.Conv2d(input_dim, self.layerDim, 4, 2, 1),
+            nn.BatchNorm2d(self.layerDim),
+            nn.ReLU(True),
+            nn.Conv2d(self.layerDim, self.resDim, 4, 2, 1),
+            nn.BatchNorm2d(self.layerDim),
+            nn.ReLU(True),
+            nn.Conv2d(self.layerDim, self.resDim, 4, 2, 1),
+            nn.BatchNorm2d(self.layerDim),
+            nn.ReLU(True),
+            nn.Conv2d(self.layerDim, self.resDim, 4, 2, 1),
+            ResBlock(self.resDim),
+            ResBlock(self.resDim),
+        )
+
+        self.codebook = VQEmbedding(K, dim)
+
+        self.decoder = nn.Sequential(
+            ResBlock(self.resDim),
+            ResBlock(self.resDim),
+            nn.ReLU(True),
+            nn.ConvTranspose2d(self.resDim, self.layerDim, 4, 2, 1),
+            nn.BatchNorm2d(self.layerDim),
+            nn.ReLU(True),
+            nn.ConvTranspose2d(self.resDim, self.layerDim, 4, 2, 1),
+            nn.BatchNorm2d(self.layerDim),
+            nn.ReLU(True),
+            nn.ConvTranspose2d(self.resDim, self.layerDim, 4, 2, 1),
+            nn.BatchNorm2d(self.layerDim),
+            nn.ReLU(True),
+            nn.ConvTranspose2d(self.layerDim, input_dim, 4, 2, 1),
+            nn.Tanh()
+        )
+
+        self.apply(weights_init)
+
+    def encode(self, x):
+        z_e_x = self.encoder(x)
+        latents = self.codebook(z_e_x)
+        return latents
+
+    def decode(self, latents):
+        z_q_x = self.codebook.embedding(latents).permute(0, 3, 1, 2)  # (B, D, H, W)
+        x_tilde = self.decoder(z_q_x)
+        return x_tilde
+
+    def forward(self, x):
+        z_e_x = self.encoder(x)
+        z_q_x_st, z_q_x = self.codebook.straight_through(z_e_x)
+        x_tilde = self.decoder(z_q_x_st)
+        return x_tilde, z_e_x, z_q_x
