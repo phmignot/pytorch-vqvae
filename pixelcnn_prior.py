@@ -2,9 +2,10 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 import json
-from torchvision import transforms
+from torchvision import transforms, datasets
 from torchvision.utils import save_image, make_grid
 
+from gameRunsDataset import GameRuns
 from modules import VectorQuantizedVAE, GatedPixelCNN
 from datasets import MiniImagenet
 
@@ -98,6 +99,19 @@ def main(args):
         test_dataset = MiniImagenet(args.data_folder, test=True,
             download=True, transform=transform)
         num_channels = 3
+    elif args.dataset == 'gameRuns':
+        transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+        ])
+        print(" GameRuns Define the train, valid & test datasets")
+        train_dataset = GameRuns(folder = args.data_folder,
+        filename = 'concatTrain.hdf5', transform=transform)
+        valid_dataset = GameRuns(folder = args.data_folder,
+        filename = 'concatValid.hdf5', transform=transform)
+        test_dataset = GameRuns(folder = args.data_folder,
+        filename = 'concatTest.hdf5', transform=transform)
+        num_channels = 3
 
     # Define the data loaders
     train_loader = torch.utils.data.DataLoader(train_dataset,
@@ -110,8 +124,8 @@ def main(args):
         batch_size=16, shuffle=True)
 
     # Save the label encoder
-    with open('./models/{0}/labels.json'.format(args.output_folder), 'w') as f:
-        json.dump(train_dataset._label_encoder, f)
+    # with open('./models/{0}/labels.json'.format(args.output_folder), 'w') as f:
+    #     json.dump(train_dataset._label_encoder, f)
 
     # Fixed images for Tensorboard
     fixed_images, _ = next(iter(test_loader))
@@ -125,7 +139,8 @@ def main(args):
     model.eval()
 
     prior = GatedPixelCNN(args.k, args.hidden_size_prior,
-        args.num_layers, n_classes=len(train_dataset._label_encoder)).to(args.device)
+        args.num_layers, n_classes=32).to(args.device)
+        #args.num_layers, n_classes=len(train_dataset._label_encoder)).to(args.device)
     optimizer = torch.optim.Adam(prior.parameters(), lr=args.lr)
 
     best_loss = -1.
