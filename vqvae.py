@@ -3,8 +3,10 @@ import torch
 import torch.nn.functional as F
 from torchvision import transforms, datasets
 from torchvision.utils import save_image, make_grid
+# import color_loss
 
-from modules import VectorQuantizedVAE, to_scalar
+from gameRunsDataset import GameRuns
+from modules import VectorQuantizedVAE, VQVAE_res16, VQVAE_res8, to_scalar
 from datasets import MiniImagenet
 
 from tensorboardX import SummaryWriter
@@ -12,11 +14,10 @@ from tensorboardX import SummaryWriter
 def train(data_loader, model, optimizer, args, writer):
     for images, _ in data_loader:
         images = images.to(args.device)
-
         optimizer.zero_grad()
         x_tilde, z_e_x, z_q_x = model(images)
-
         # Reconstruction loss
+        # loss_recons = color_loss.color_loss(x_tilde, images)
         loss_recons = F.mse_loss(x_tilde, images)
         # Vector quantization objective
         loss_vq = F.mse_loss(z_q_x, z_e_x.detach())
@@ -24,14 +25,16 @@ def train(data_loader, model, optimizer, args, writer):
         loss_commit = F.mse_loss(z_e_x, z_q_x.detach())
 
         loss = loss_recons + loss_vq + args.beta * loss_commit
-        loss.backward()
 
+        loss.backward()
         # Logs
         writer.add_scalar('loss/train/reconstruction', loss_recons.item(), args.steps)
         writer.add_scalar('loss/train/quantization', loss_vq.item(), args.steps)
 
         optimizer.step()
         args.steps += 1
+    print(args.steps, " Loss: recons=", loss_recons, ", Vq=",loss_vq,", commit=", loss_commit)
+
 
 def test(data_loader, model, args, writer):
     with torch.no_grad():
@@ -67,7 +70,7 @@ def main(args):
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
         ])
         if args.dataset == 'mnist':
-            # Define the train & test datasets
+            print(" Define the train & test datasets")
             train_dataset = datasets.MNIST(args.data_folder, train=True,
                 download=True, transform=transform)
             test_dataset = datasets.MNIST(args.data_folder, train=False,
@@ -102,8 +105,21 @@ def main(args):
         test_dataset = MiniImagenet(args.data_folder, test=True,
             download=True, transform=transform)
         num_channels = 3
+    elif args.dataset == 'gameRuns':
+        transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(mean = (0.5, 0.5, 0.5), std= (0.5, 0.5, 0.5))
+        ])
+        print(" GameRuns Define the train, valid & test datasets")
+        train_dataset = GameRuns(folder = args.data_folder,
+        filename = 'concatAllTrain.hdf5', transform=transform)
+        valid_dataset = GameRuns(folder = args.data_folder,
+        filename = 'concatAllValid.hdf5', transform=transform)
+        test_dataset = GameRuns(folder = args.data_folder,
+        filename = 'concatAllTest.hdf5', transform=transform)
+        num_channels = 3
 
-    # Define the data loaders
+    print("Define the data loaders")
     train_loader = torch.utils.data.DataLoader(train_dataset,
         batch_size=args.batch_size, shuffle=False,
         num_workers=args.num_workers, pin_memory=True)
@@ -113,20 +129,27 @@ def main(args):
     test_loader = torch.utils.data.DataLoader(test_dataset,
         batch_size=16, shuffle=True)
 
-    # Fixed images for Tensorboard
+    print("Fixed images for Tensorboard .")
     fixed_images, _ = next(iter(test_loader))
+    print("Building Grid")
     fixed_grid = make_grid(fixed_images, nrow=8, range=(-1, 1), normalize=True)
     writer.add_image('original', fixed_grid, 0)
 
-    model = VectorQuantizedVAE(num_channels, args.hidden_size, args.k).to(args.device)
+    print("Building Model")
+    # model = VectorQuantizedVAE(num_channels, args.hidden_size, args.k).to(args.device)
+    model = VQVAE_res16(num_channels, args.hidden_size, args.k).to(args.device)
+    # model = VQVAE_res8(num_channels, args.hidden_size, args.k).to(args.device)
+    print("Model :")
+    print(model)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
-    # Generate the samples first once
+    print("Generate the samples first once")
     reconstruction = generate_samples(fixed_images, model, args)
     grid = make_grid(reconstruction.cpu(), nrow=8, range=(-1, 1), normalize=True)
     writer.add_image('reconstruction', grid, 0)
 
     best_loss = -1.
+    print("Begin training")
     for epoch in range(args.num_epochs):
         train(train_loader, model, optimizer, args, writer)
         loss, _ = test(valid_loader, model, args, writer)
@@ -135,6 +158,7 @@ def main(args):
         grid = make_grid(reconstruction.cpu(), nrow=8, range=(-1, 1), normalize=True)
         writer.add_image('reconstruction', grid, epoch + 1)
 
+        print("Epoch ",epoch," Loss : ", loss)
         if (epoch == 0) or (loss < best_loss):
             best_loss = loss
             with open('{0}/best.pt'.format(save_filename), 'wb') as f:
