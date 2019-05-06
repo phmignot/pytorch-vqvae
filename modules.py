@@ -285,8 +285,8 @@ VQVAE version with resolution of 16x16
 class VQVAE_res16(nn.Module):
     def __init__(self, input_dim, dim, K=512):
         super().__init__()
-        self.layerDim = 64
-        self.resDim = 64
+        self.layerDim = 128
+        self.resDim = 128
         self.encoder = nn.Sequential(
             nn.Conv2d(input_dim, self.layerDim, 4, 2, 1),
             nn.BatchNorm2d(self.layerDim),
