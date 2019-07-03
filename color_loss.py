@@ -36,9 +36,7 @@ def color_loss(input, target, reduction='mean'):
                     nbApparition = pixDictionary[getIndexPix(input[img,:,i,j].detach())]
                     color_coef = nbPixel / (nbPixelDif * nbApparition)
                     ret[img,:,i,j] = mse * color_coef
-        print("OK ")
     else:
-        print("======WOW=================================")
         expanded_input, expanded_target = torch.broadcast_tensors(input, target)
         for i in range(height):
             for j in range(width):
