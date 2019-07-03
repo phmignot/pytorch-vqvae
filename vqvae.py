@@ -106,17 +106,14 @@ def main(args):
             download=True, transform=transform)
         num_channels = 3
     elif args.dataset == 'gameRuns':
-        transform = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize(mean = (0.5, 0.5, 0.5), std= (0.5, 0.5, 0.5))
-        ])
+
         print(" GameRuns Define the train, valid & test datasets")
         train_dataset = GameRuns(folder = args.data_folder,
-        filename = 'concatAllTrain.hdf5', transform=transform)
+        filename = 'concatAllTrain.hdf5')
         valid_dataset = GameRuns(folder = args.data_folder,
-        filename = 'concatAllValid.hdf5', transform=transform)
+        filename = 'concatAllValid.hdf5')
         test_dataset = GameRuns(folder = args.data_folder,
-        filename = 'concatAllTest.hdf5', transform=transform)
+        filename = 'concatAllTest.hdf5')
         num_channels = 3
 
     print("Define the data loaders")
