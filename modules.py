@@ -110,6 +110,9 @@ class ResBlock(nn.Module):
 class VectorQuantizedVAE(nn.Module):
     def __init__(self, input_dim, dim, K=512):
         super().__init__()
+        self.buildModel(input_dim, dim, K)
+
+    def buildModel(self, input_dim, dim, K):
         self.layerDim = 64
         self.resDim = 64
         self.encoder = nn.Sequential(
@@ -290,7 +293,9 @@ VQVAE version with resolution of 16x16
 '''
 class VQVAE_res16(VectorQuantizedVAE):
     def __init__(self, input_dim, dim, K=512):
-        super().__init__()
+        super().__init__(input_dim, dim, K)
+
+    def buildModel(self, input_dim, dim, K):
         self.layerDim = 128
         self.resDim = 128
         self.encoder = nn.Sequential(
@@ -328,7 +333,9 @@ VQVAE version with resolution of 8x8
 '''
 class VQVAE_res8(VectorQuantizedVAE):
     def __init__(self, input_dim, dim, K=512):
-        super().__init__()
+        super().__init__(input_dim, dim, K)
+
+    def buildModel(self, input_dim, dim, K):
         self.layerDim = dim
         self.resDim = dim
         self.encoder = nn.Sequential(
