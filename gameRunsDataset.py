@@ -9,7 +9,7 @@ class GameRuns(data.Dataset):
     #base_folder = './data/'
     #filename = 'concatF4C2G3K4.hdf5'
 
-    def __init__(self, folder, filename, imgs_key='runs', transform=None):
+    def __init__(self, folder, filename, imgs_key='runs'):
         self.hdf5file = folder + filename
         self.imgs_key = imgs_key
         self.transform = transform
@@ -23,9 +23,6 @@ class GameRuns(data.Dataset):
         with h5py.File(self.hdf5file,'r') as db:
             image = (db[self.imgs_key][idx])
             label = array([[[0]]])
-        # if self.transform:
-        #     image = self.transform(image)
-        #     label = transforms.ToTensor()(label)
         image = transforms.ToTensor()(image)
         image = image.float()
         image = transforms.functional.normalize(image, mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
