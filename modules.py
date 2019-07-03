@@ -154,6 +154,12 @@ class VectorQuantizedVAE(nn.Module):
         x_tilde = self.decoder(z_q_x_st)
         return x_tilde, z_e_x, z_q_x
 
+    # Functions Added:
+    # Retrieves from the index latents, the vectors matching in the codebook.
+    def embedLatents(self, latents):
+        z_q_x = self.codebook.embedding(latents)  # (B, H, W, D)
+        return z_q_x
+
 
 class GatedActivation(nn.Module):
     def __init__(self):
@@ -282,7 +288,7 @@ class GatedPixelCNN(nn.Module):
 '''
 VQVAE version with resolution of 16x16
 '''
-class VQVAE_res16(nn.Module):
+class VQVAE_res16(VectorQuantizedVAE):
     def __init__(self, input_dim, dim, K=512):
         super().__init__()
         self.layerDim = 128
@@ -299,7 +305,6 @@ class VQVAE_res16(nn.Module):
             ResBlock(self.resDim),
             nn.Conv2d(self.resDim, dim, 1, 1)
         )
-
         self.codebook = VQEmbedding(K, dim)
 
         self.decoder = nn.Sequential(
@@ -316,31 +321,12 @@ class VQVAE_res16(nn.Module):
             nn.ConvTranspose2d(self.layerDim, input_dim, 4, 2, 1),
             nn.Tanh()
         )
-
         self.apply(weights_init)
-
-    def encode(self, x):
-        z_e_x = self.encoder(x)
-        latents = self.codebook(z_e_x)
-        return latents
-
-    def decode(self, latents):
-        z_q_x = self.codebook.embedding(latents).permute(0, 3, 1, 2)  # (B, D, H, W)
-        x_tilde = self.decoder(z_q_x)
-        return x_tilde
-
-    def forward(self, x):
-        z_e_x = self.encoder(x)
-        z_q_x_st, z_q_x = self.codebook.straight_through(z_e_x)
-        x_tilde = self.decoder(z_q_x_st)
-        return x_tilde, z_e_x, z_q_x
-
-
 
 '''
 VQVAE version with resolution of 8x8
 '''
-class VQVAE_res8(nn.Module):
+class VQVAE_res8(VectorQuantizedVAE):
     def __init__(self, input_dim, dim, K=512):
         super().__init__()
         self.layerDim = dim
@@ -359,7 +345,6 @@ class VQVAE_res8(nn.Module):
             ResBlock(self.resDim),
             ResBlock(self.resDim),
         )
-
         self.codebook = VQEmbedding(K, dim)
 
         self.decoder = nn.Sequential(
@@ -378,21 +363,4 @@ class VQVAE_res8(nn.Module):
             nn.ConvTranspose2d(self.layerDim, input_dim, 4, 2, 1),
             nn.Tanh()
         )
-
         self.apply(weights_init)
-
-    def encode(self, x):
-        z_e_x = self.encoder(x)
-        latents = self.codebook(z_e_x)
-        return latents
-
-    def decode(self, latents):
-        z_q_x = self.codebook.embedding(latents).permute(0, 3, 1, 2)  # (B, D, H, W)
-        x_tilde = self.decoder(z_q_x)
-        return x_tilde
-
-    def forward(self, x):
-        z_e_x = self.encoder(x)
-        z_q_x_st, z_q_x = self.codebook.straight_through(z_e_x)
-        x_tilde = self.decoder(z_q_x_st)
-        return x_tilde, z_e_x, z_q_x
