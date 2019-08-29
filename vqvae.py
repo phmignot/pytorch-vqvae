@@ -109,11 +109,11 @@ def main(args):
 
         print(" GameRuns Define the train, valid & test datasets")
         train_dataset = GameRuns(folder = args.data_folder,
-        filename = 'concatAllTrain.hdf5')
+                                filename = 'concatAllTrain.hdf5')
         valid_dataset = GameRuns(folder = args.data_folder,
-        filename = 'concatAllValid.hdf5')
+                                filename = 'concatAllValid.hdf5')
         test_dataset = GameRuns(folder = args.data_folder,
-        filename = 'concatAllTest.hdf5')
+                                filename = 'concatAllTest.hdf5')
         num_channels = 3
 
     print("Define the data loaders")

@@ -12,7 +12,6 @@ class GameRuns(data.Dataset):
     def __init__(self, folder, filename, imgs_key='runs'):
         self.hdf5file = folder + filename
         self.imgs_key = imgs_key
-        self.transform = transform
 
     def __len__(self):
         with h5py.File(self.hdf5file, 'r') as db:

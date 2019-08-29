@@ -108,13 +108,13 @@ class ResBlock(nn.Module):
 
 
 class VectorQuantizedVAE(nn.Module):
-    def __init__(self, input_dim, dim, K=512):
+    def __init__(self, input_dim, dim, K=512, layerDim=64, resDim=64):
         super().__init__()
-        self.buildModel(input_dim, dim, K)
+        self.buildModel(input_dim, dim, K, layerDim, resDim)
 
-    def buildModel(self, input_dim, dim, K):
-        self.layerDim = 64
-        self.resDim = 64
+    def buildModel(self, input_dim, dim, K, layerDim=64, resDim=64):
+        self.layerDim = layerDim
+        self.resDim = resDim
         self.encoder = nn.Sequential(
             nn.Conv2d(input_dim, self.layerDim, 4, 2, 1),
             nn.BatchNorm2d(self.layerDim),
@@ -292,12 +292,12 @@ class GatedPixelCNN(nn.Module):
 VQVAE version with resolution of 16x16
 '''
 class VQVAE_res16(VectorQuantizedVAE):
-    def __init__(self, input_dim, dim, K=512):
-        super().__init__(input_dim, dim, K)
+    def __init__(self, input_dim, dim, K=512, layerDim=64, resDim=64):
+        super().__init__(input_dim, dim, K, layerDim, resDim)
 
-    def buildModel(self, input_dim, dim, K):
-        self.layerDim = 128
-        self.resDim = 128
+    def buildModel(self, input_dim, dim, K, layerDim=64, resDim=64):
+        self.layerDim = layerDim
+        self.resDim = resDim
         self.encoder = nn.Sequential(
             nn.Conv2d(input_dim, self.layerDim, 4, 2, 1),
             nn.BatchNorm2d(self.layerDim),
@@ -332,12 +332,12 @@ class VQVAE_res16(VectorQuantizedVAE):
 VQVAE version with resolution of 8x8
 '''
 class VQVAE_res8(VectorQuantizedVAE):
-    def __init__(self, input_dim, dim, K=512):
-        super().__init__(input_dim, dim, K)
+    def __init__(self, input_dim, dim, K=512, layerDim=64, resDim=64):
+        super().__init__(input_dim, dim, K, layerDim, resDim)
 
-    def buildModel(self, input_dim, dim, K):
-        self.layerDim = dim
-        self.resDim = dim
+    def buildModel(self, input_dim, dim, K, layerDim=64, resDim=64):
+        self.layerDim = layerDim
+        self.resDim = resDim
         self.encoder = nn.Sequential(
             nn.Conv2d(input_dim, self.layerDim, 4, 2, 1),
             nn.BatchNorm2d(self.layerDim),
